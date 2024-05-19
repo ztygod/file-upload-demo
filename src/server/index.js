@@ -23,8 +23,11 @@ const resolvePost = req =>
 const pipeStream = (path, writeStream) =>
     new Promise(reslove => {
         const readStream = fse.createReadStream(path)
+        readStream.pipe(writeStream)
         readStream.on("end", () => {
+            console.log("删除文件前")
             fse.unlinkSync(path)
+            console.log("删除文件后")
             reslove()
         })
         readStream.pipe(writeStream)
@@ -33,23 +36,34 @@ const pipeStream = (path, writeStream) =>
 const mergeChunk = async (filePath, filename, size) => {
     const chunkDir = path.resolve(UPLOAD_DIR, 'chunkDir' + filename)
     const chunkPaths = await fse.readdir(chunkDir)
+    console.log("chunkPaths--0", chunkPaths)
     //根据切片下标进行排序
     //否则直接读取，顺序会错乱
     chunkPaths.sort((a, b) => a.split("-")[1] - b.split("-")[1])
+    console.log("chunkPaths--1", chunkPaths)
     //并发写入文件
-    await Promise.all(
-        chunkPaths.map((chunkPath, index) => {
-            pipeStream(
-                path.resolve(chunkDir, chunkPath),
-                //创建可写流
-                fse.createWriteStream(filePath, {
-                    start: index * size
-                })
-            )
-        })
-    )
+
+    const arr = chunkPaths.map((chunkPath, index) => {
+        pipeStream(
+            path.resolve(chunkDir, chunkPath),
+            //创建可写流
+            fse.createWriteStream(filePath, {
+                start: index * size,
+            })
+        )
+    })
+    Promise.all(arr)
     //合并后删除保存切片的目录
-    fse.rmdirSync(chunkDir)
+    //fse.rmdirSync(chunkDir)
+    //这一步会出现错误，固取消，错误如下
+    // Error: ENOTEMPTY: directory not empty, rmdir 'C:\Users\27390\Desktop\笔记\手写代码\file-upload-demo\src\target\chunkDirJDK_API_1.6_zh_中文.CHM'
+    // at Object.rmdirSync(node: fs: 1219: 11)
+    // at Server.< anonymous > (C: \Users\27390\Desktop\笔记\手写代码\file - upload - demo\src\server\index.js: 108: 13) {
+    //     errno: -4051,
+    //         code: 'ENOTEMPTY',
+    //             syscall: 'rmdir',
+    //                 path: 'C:\\Users\\27390\\Desktop\\笔记\\手写代码\\file-upload-demo\\src\\target\\chunkDirJDK_API_1.6_zh_中文.CHM'
+
 }
 
 server.on("request", async (req, res) => {
@@ -96,6 +110,7 @@ server.on("request", async (req, res) => {
         const data = await resolvePost(req)
         const { filename, size } = data
         const filePath = path.resolve(UPLOAD_DIR, `${filename}`)
+        console.log("进入mergeChunk")
         await mergeChunk(filePath, filename, size)
         res.end(
             JSON.stringify({
