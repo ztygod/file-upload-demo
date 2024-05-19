@@ -2,7 +2,6 @@
   <div id="app">
     <input type="file" @change="handleFileChange"/>
      <el-button type="primary" @click="handleUpload">上传</el-button>
-     <el-button type="primary" @click="test">测试</el-button>
      <!-- <div>
       <el-progress :percentage="uploadPercentage"></el-progress>
      </div> -->
@@ -110,15 +109,15 @@ export default {
         })
       })
     },
-    test(){
-      this.request({
-        url:"http://localhost:3000/merge",
-        data:JSON.stringify({
-          filename:this.container.file.name,
-          size:SIZE
-        })
-      })
-    }
+    // test(){
+    //   this.request({
+    //     url:"http://localhost:3000/merge",
+    //     data:JSON.stringify({
+    //       filename:this.container.file.name,
+    //       size:SIZE
+    //     })
+    //   })
+    // }
     // createProgressHandler(item){
     //   return e => {
     //     item.percentage = parseInt(String((e.loaded / e.tatal) * 100))
